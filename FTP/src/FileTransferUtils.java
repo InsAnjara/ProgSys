@@ -60,7 +60,6 @@ public class FileTransferUtils {
         System.out.println("Checksum calculé : " + receivedChecksum);
 
         if (!expectedChecksum.equals(receivedChecksum)) {
-            // Supprimer le fichier corrompu
             if (!saveFile.delete()) {
                 System.err.println("Impossible de supprimer le fichier corrompu : " + saveFile.getAbsolutePath());
             }
@@ -123,7 +122,6 @@ public class FileTransferUtils {
         }
     }
 
-    // Méthode pour calculer un checksum (MD5)
     public static String calculateChecksum(String filePath) throws IOException {
         try (FileInputStream fis = new FileInputStream(filePath)) {
             MessageDigest digest = MessageDigest.getInstance("MD5");
@@ -145,50 +143,6 @@ public class FileTransferUtils {
         }
     }
 
-    // Méthode pour compresser un fichier avant l'envoi (optionnelle)
-    public static File compressFile(String filePath) throws IOException {
-        File file = new File(filePath);
-        if (!file.exists() || !file.isFile()) {
-            throw new FileNotFoundException("Fichier introuvable : " + filePath);
-        }
-
-        File compressedFile = new File(file.getParent(), file.getName() + ".gz");
-        try (FileInputStream fis = new FileInputStream(file);
-             FileOutputStream fos = new FileOutputStream(compressedFile);
-             BufferedOutputStream bos = new BufferedOutputStream(new java.util.zip.GZIPOutputStream(fos))) {
-
-            byte[] buffer = new byte[4096];
-            int bytesRead;
-            while ((bytesRead = fis.read(buffer)) > 0) {
-                bos.write(buffer, 0, bytesRead);
-            }
-        }
-        return compressedFile;
-    }
-
-    // Méthode pour décompresser un fichier après réception (optionnelle)
-    public static File decompressFile(String compressedFilePath) throws IOException {
-        File compressedFile = new File(compressedFilePath);
-        if (!compressedFile.exists() || !compressedFile.isFile()) {
-            throw new FileNotFoundException("Fichier compressé introuvable : " + compressedFilePath);
-        }
-
-        File decompressedFile = new File(compressedFile.getParent(),
-                compressedFile.getName().replace(".gz", ""));
-        try (FileInputStream fis = new FileInputStream(compressedFile);
-             BufferedInputStream bis = new BufferedInputStream(new java.util.zip.GZIPInputStream(fis));
-             FileOutputStream fos = new FileOutputStream(decompressedFile)) {
-
-            byte[] buffer = new byte[4096];
-            int bytesRead;
-            while ((bytesRead = bis.read(buffer)) > 0) {
-                fos.write(buffer, 0, bytesRead);
-            }
-        }
-        return decompressedFile;
-    }
-
-    // Méthode pour diviser un fichier en parties (partitionnement)
     public static File[] splitFile(String filePath, int numParts) throws IOException {
         File file = new File(filePath);
         if (!file.exists() || !file.isFile()) {
@@ -226,7 +180,11 @@ public class FileTransferUtils {
         }
 
         if (!directory.isDirectory()) {
-            directory.delete();
+            if (directory.delete()) {
+                System.out.println("Deleted file: " + directoryPath);
+            } else {
+                System.err.println("Failed to delete file: " + directoryPath);
+            }
             return;
         }
 
